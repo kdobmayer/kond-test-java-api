@@ -1,0 +1,7 @@
+test: "mvn test"
+build: "mvn clean install"
+files:
+  - path: src/main/java/com/kond/orders/controller/HealthController.java
+    why: "To add a new REST controller for the health check endpoint."
+  - path: src/test/java/com/kond/orders/controller/HealthControllerTest.java
+    why: "To add integration tests for the new HealthController."
