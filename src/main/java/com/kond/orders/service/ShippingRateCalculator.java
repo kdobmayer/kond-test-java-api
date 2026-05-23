@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Shipping rate calculator.
@@ -23,9 +24,13 @@ public class ShippingRateCalculator {
     private static final BigDecimal DISTANCE_FACTOR = new BigDecimal("1.15");
 
     public List<ShippingRateResponse> calculateRates(ShippingRateRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Shipping rate request is required");
+        }
+
         List<ShippingRateResponse> rates = new ArrayList<>();
 
-        BigDecimal weight = request.getWeight();
+        BigDecimal weight = validateWeight(request.getWeight());
         boolean isInternational = isInternational(request.getOriginAddress(), request.getDestinationAddress());
         BigDecimal distanceMultiplier = isInternational ? DISTANCE_FACTOR.multiply(new BigDecimal("2.5")) : DISTANCE_FACTOR;
 
@@ -59,8 +64,9 @@ public class ShippingRateCalculator {
     }
 
     public BigDecimal calculateSingleRate(BigDecimal weight, String serviceLevel, boolean international) {
+        BigDecimal validatedWeight = validateWeight(weight);
         BigDecimal baseRate;
-        switch (serviceLevel.toUpperCase()) {
+        switch (normalizeServiceLevel(serviceLevel)) {
             case "EXPRESS":
                 baseRate = BASE_RATE_EXPRESS;
                 break;
@@ -72,7 +78,7 @@ public class ShippingRateCalculator {
         }
 
         BigDecimal distanceMultiplier = international ? DISTANCE_FACTOR.multiply(new BigDecimal("2.5")) : DISTANCE_FACTOR;
-        return calculateRate(baseRate, weight, distanceMultiplier);
+        return calculateRate(baseRate, validatedWeight, distanceMultiplier);
     }
 
     private BigDecimal calculateRate(BigDecimal baseRate, BigDecimal weight, BigDecimal distanceMultiplier) {
@@ -84,6 +90,23 @@ public class ShippingRateCalculator {
         String originCountry = extractCountry(origin);
         String destCountry = extractCountry(destination);
         return !originCountry.equalsIgnoreCase(destCountry);
+    }
+
+    private BigDecimal validateWeight(BigDecimal weight) {
+        if (weight == null) {
+            throw new IllegalArgumentException("Weight is required");
+        }
+        if (weight.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Weight must be greater than or equal to zero");
+        }
+        return weight;
+    }
+
+    private String normalizeServiceLevel(String serviceLevel) {
+        if (serviceLevel == null || serviceLevel.isBlank()) {
+            return "STANDARD";
+        }
+        return serviceLevel.trim().toUpperCase(Locale.ROOT);
     }
 
     private String extractCountry(String address) {

@@ -1,6 +1,7 @@
 package com.kond.orders.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
@@ -13,6 +14,7 @@ public class ShippingRateRequest {
     private String destinationAddress;
 
     @NotNull(message = "Weight is required")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Weight must be greater than or equal to zero")
     private BigDecimal weight;
 
     private String carrier;
