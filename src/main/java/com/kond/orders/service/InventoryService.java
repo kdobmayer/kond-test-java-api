@@ -3,7 +3,6 @@ package com.kond.orders.service;
 import com.kond.orders.dto.AvailabilityResponse;
 import com.kond.orders.dto.InventoryReserveRequest;
 import com.kond.orders.entity.*;
-import com.kond.orders.exception.InsufficientStockException;
 import com.kond.orders.exception.ResourceNotFoundException;
 import com.kond.orders.repository.InventoryReservationRepository;
 import com.kond.orders.repository.OrderRepository;
@@ -21,13 +20,16 @@ public class InventoryService {
     private final ProductRepository productRepository;
     private final InventoryReservationRepository reservationRepository;
     private final OrderRepository orderRepository;
+    private final ValidationService validationService;
 
     public InventoryService(ProductRepository productRepository,
                            InventoryReservationRepository reservationRepository,
-                           OrderRepository orderRepository) {
+                           OrderRepository orderRepository,
+                           ValidationService validationService) {
         this.productRepository = productRepository;
         this.reservationRepository = reservationRepository;
         this.orderRepository = orderRepository;
+        this.validationService = validationService;
     }
 
     // INTENTIONAL: No optimistic locking — race condition possible under concurrent access
@@ -38,17 +40,8 @@ public class InventoryService {
         Order order = orderRepository.findById(request.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + request.getOrderId()));
 
-        // Duplicated validation (also in InventoryController) — intentional rough edge
-        if (request.getQuantity() <= 0) {
-            throw new IllegalArgumentException("Quantity must be positive");
-        }
-
-        int available = product.getStockQuantity() - product.getReservedQuantity();
-        if (available < request.getQuantity()) {
-            throw new InsufficientStockException(
-                    "Insufficient stock for product " + product.getName() +
-                    ". Available: " + available + ", Requested: " + request.getQuantity());
-        }
+        validationService.validateReservationQuantity(request.getQuantity());
+        validationService.validateAvailableStock(product, request.getQuantity());
 
         // No locking here — concurrent requests can both pass the check above
         product.setReservedQuantity(product.getReservedQuantity() + request.getQuantity());
