@@ -49,7 +49,24 @@ public class ShippingController {
     @PutMapping("/shipments/{id}/status")
     public ResponseEntity<ShipmentResponse> updateShipmentStatus(@PathVariable Long id,
                                                                   @RequestBody Map<String, String> body) {
-        ShipmentStatus status = ShipmentStatus.valueOf(body.get("status").toUpperCase());
+        ShipmentStatus status = parseShipmentStatus(body);
         return ResponseEntity.ok(shippingService.updateShipmentStatus(id, status));
+    }
+
+    private ShipmentStatus parseShipmentStatus(Map<String, String> body) {
+        if (body == null) {
+            throw new IllegalArgumentException("Status is required");
+        }
+
+        String statusValue = body.get("status");
+        if (statusValue == null || statusValue.isBlank()) {
+            throw new IllegalArgumentException("Status is required");
+        }
+
+        try {
+            return ShipmentStatus.valueOf(statusValue.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid shipment status: " + statusValue);
+        }
     }
 }
