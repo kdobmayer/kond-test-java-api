@@ -16,9 +16,11 @@ import java.util.stream.Collectors;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final ValidationService validationService;
 
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(ProductRepository productRepository, ValidationService validationService) {
         this.productRepository = productRepository;
+        this.validationService = validationService;
     }
 
     public ProductResponse createProduct(ProductRequest request) {
@@ -80,9 +82,7 @@ public class ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
 
-        if (quantity < 0) {
-            throw new IllegalArgumentException("Stock quantity cannot be negative");
-        }
+        validationService.validateProductStockUpdate(quantity);
         product.setStockQuantity(quantity);
         Product saved = productRepository.save(product);
         return toResponse(saved);

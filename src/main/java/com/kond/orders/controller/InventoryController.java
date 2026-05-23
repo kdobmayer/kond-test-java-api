@@ -23,14 +23,6 @@ public class InventoryController {
 
     @PostMapping("/reserve")
     public ResponseEntity<Map<String, Object>> reserveStock(@Valid @RequestBody InventoryReserveRequest request) {
-        // Duplicated validation — also exists in InventoryService (intentional rough edge)
-        if (request.getQuantity() <= 0) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "error", "Bad Request",
-                    "message", "Quantity must be positive"
-            ));
-        }
-
         InventoryReservation reservation = inventoryService.reserveStock(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "reservationId", reservation.getId(),
