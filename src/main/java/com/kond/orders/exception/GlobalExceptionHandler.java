@@ -2,6 +2,7 @@ package com.kond.orders.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -31,6 +32,17 @@ public class GlobalExceptionHandler {
         body.put("status", 409);
         body.put("error", "Conflict");
         body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, Object>> handleOptimisticLockingFailure(
+            ObjectOptimisticLockingFailureException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("status", 409);
+        body.put("error", "Conflict");
+        body.put("message", "Concurrent modification detected. Please retry the request.");
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
