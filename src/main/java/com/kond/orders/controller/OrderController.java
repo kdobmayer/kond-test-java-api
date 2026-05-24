@@ -58,4 +58,9 @@ public class OrderController {
         String reason = body != null ? body.get("reason") : null;
         return ResponseEntity.ok(orderService.cancelOrder(id, reason));
     }
+
+    @PostMapping("/{id}/fulfill")
+    public ResponseEntity<FulfillmentPlan> fulfillOrder(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.fulfillOrder(id));
+    }
 }
