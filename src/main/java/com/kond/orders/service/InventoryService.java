@@ -30,7 +30,6 @@ public class InventoryService {
         this.orderRepository = orderRepository;
     }
 
-    // INTENTIONAL: No optimistic locking — race condition possible under concurrent access
     public InventoryReservation reserveStock(InventoryReserveRequest request) {
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + request.getProductId()));
@@ -38,7 +37,6 @@ public class InventoryService {
         Order order = orderRepository.findById(request.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + request.getOrderId()));
 
-        // Duplicated validation (also in InventoryController) — intentional rough edge
         if (request.getQuantity() <= 0) {
             throw new IllegalArgumentException("Quantity must be positive");
         }
@@ -50,7 +48,6 @@ public class InventoryService {
                     ". Available: " + available + ", Requested: " + request.getQuantity());
         }
 
-        // No locking here — concurrent requests can both pass the check above
         product.setReservedQuantity(product.getReservedQuantity() + request.getQuantity());
         productRepository.save(product);
 
