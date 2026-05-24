@@ -25,6 +25,8 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
     private final ApplicationEventPublisher eventPublisher;
+    private final FulfillmentService fulfillmentService;
+    private final ShippingService shippingService;
 
     private static final Set<OrderStatus> CANCELLABLE_STATUSES = Set.of(OrderStatus.CREATED, OrderStatus.CONFIRMED);
 
@@ -32,12 +34,16 @@ public class OrderService {
                        CustomerRepository customerRepository,
                        ProductRepository productRepository,
                        InventoryService inventoryService,
-                       ApplicationEventPublisher eventPublisher) {
+                       ApplicationEventPublisher eventPublisher,
+                       FulfillmentService fulfillmentService,
+                       ShippingService shippingService) {
         this.orderRepository = orderRepository;
         this.customerRepository = customerRepository;
         this.productRepository = productRepository;
         this.inventoryService = inventoryService;
         this.eventPublisher = eventPublisher;
+        this.fulfillmentService = fulfillmentService;
+        this.shippingService = shippingService;
     }
 
     public OrderResponse createOrder(CreateOrderRequest request) {
@@ -101,6 +107,36 @@ public class OrderService {
                 saved.getId(), previousStatus, newStatus, request.getReason()));
 
         return toResponse(saved);
+    }
+
+    public FulfillmentPlan fulfillOrder(Long orderId) {
+        FulfillmentPlan plan = fulfillmentService.fulfill(orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
+
+        OrderStatus previousStatus = order.getStatus();
+        validateTransition(previousStatus, OrderStatus.CONFIRMED);
+
+        for (OrderItem item : order.getItems()) {
+            InventoryReserveRequest req = new InventoryReserveRequest();
+            req.setProductId(item.getProduct().getId());
+            req.setOrderId(orderId);
+            req.setQuantity(item.getQuantity());
+            inventoryService.reserveStock(req);
+        }
+
+        order.setStatus(OrderStatus.CONFIRMED);
+        Order saved = orderRepository.save(order);
+
+        eventPublisher.publishEvent(new OrderStatusChangedEvent(
+                saved.getId(), previousStatus, OrderStatus.CONFIRMED, "Fulfilled"));
+
+        CreateShipmentRequest shipReq = new CreateShipmentRequest();
+        shipReq.setOrderId(saved.getId());
+        shippingService.createShipment(shipReq);
+
+        return plan;
     }
 
     public OrderResponse cancelOrder(Long orderId, String reason) {
