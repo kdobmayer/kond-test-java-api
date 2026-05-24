@@ -27,6 +27,7 @@ public class OrderService {
     private final ApplicationEventPublisher eventPublisher;
     private final FulfillmentService fulfillmentService;
     private final ShippingService shippingService;
+    private final FulfillmentRollbackService fulfillmentRollbackService;
 
     private static final Set<OrderStatus> CANCELLABLE_STATUSES = Set.of(OrderStatus.CREATED, OrderStatus.CONFIRMED);
 
@@ -36,7 +37,8 @@ public class OrderService {
                        InventoryService inventoryService,
                        ApplicationEventPublisher eventPublisher,
                        FulfillmentService fulfillmentService,
-                       ShippingService shippingService) {
+                       ShippingService shippingService,
+                       FulfillmentRollbackService fulfillmentRollbackService) {
         this.orderRepository = orderRepository;
         this.customerRepository = customerRepository;
         this.productRepository = productRepository;
@@ -44,6 +46,7 @@ public class OrderService {
         this.eventPublisher = eventPublisher;
         this.fulfillmentService = fulfillmentService;
         this.shippingService = shippingService;
+        this.fulfillmentRollbackService = fulfillmentRollbackService;
     }
 
     public OrderResponse createOrder(CreateOrderRequest request) {
@@ -153,9 +156,7 @@ public class OrderService {
         order.setCancellationReason(reason);
         order.setCancelledAt(java.time.LocalDateTime.now());
 
-        if (previousStatus == OrderStatus.CONFIRMED) {
-            inventoryService.releaseOrderReservations(orderId);
-        }
+        fulfillmentRollbackService.rollbackFulfillment(orderId);
 
         Order saved = orderRepository.save(order);
 
