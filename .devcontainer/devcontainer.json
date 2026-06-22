@@ -1,0 +1,17 @@
+{
+  "name": "kond-test-java-api",
+  "image": "mcr.microsoft.com/devcontainers/java:21-trixie",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
+  "containerEnv": {
+    "JAVA_HOME": "/usr/lib/jvm/msopenjdk-current"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack"
+      ]
+    }
+  }
+}
